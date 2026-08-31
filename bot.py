@@ -1,9 +1,3 @@
-"""
-Bot Financeiro - Telegram + SQLite
-
-Rode com:  python bot.py
-Configure o arquivo .env antes (veja .env.example).
-"""
 
 import os
 import re
@@ -44,7 +38,7 @@ CATEGORIAS = [
     "Lazer", "Compras", "Educacao", "Outros",
 ]
 
-# Palavras-chave iniciais. O bot aprende mais conforme voce corrige.
+
 REGRAS_BASE = {
     "Alimentacao": ["mercado", "supermercado", "padaria", "ifood", "restaurante",
                     "lanche", "almoco", "jantar", "cafe", "pizza", "feira",
@@ -64,15 +58,12 @@ REGRAS_BASE = {
                  "mensalidade", "apostila", "udemy"],
 }
 
-# Palavras ignoradas ao montar a descricao
+
 RUIDO = {"gastei", "paguei", "comprei", "no", "na", "em", "de", "do", "da",
          "com", "por", "pra", "para", "um", "uma", "o", "a", "reais", "conto",
          "contos", "pila", "hoje", "ontem", "anteontem"}
 
 
-# --------------------------------------------------------------------
-# Banco de dados
-# --------------------------------------------------------------------
 
 def conectar():
     conn = sqlite3.connect(DB_PATH)
@@ -151,9 +142,6 @@ def regras_aprendidas() -> dict:
                 for r in conn.execute("SELECT palavra, categoria FROM regras")}
 
 
-# --------------------------------------------------------------------
-# Parser
-# --------------------------------------------------------------------
 
 def normalizar(s: str) -> str:
     s = unicodedata.normalize("NFD", s.lower())
@@ -169,16 +157,13 @@ def primeira_palavra_util(texto: str) -> str:
 
 VALOR_RE = re.compile(
     r"(?:^|\s)"
-    r"(\d{1,3}(?:\.\d{3})+,\d{2}"      # 1.250,00
-    r"|\d+,\d{2}"                      # 45,90
-    r"|\d+\.\d{2}"                     # 45.90
-    r"|\d+)"                           # 45
+    r"(\d{1,3}(?:\.\d{3})+,\d{2}"      
     r"(?=\s|$)"
 )
 
 
 def extrair_data(texto: str):
-    """Le referencias relativas e datas curtas. Devolve (data, texto_limpo)."""
+    
     n = normalizar(texto)
     hoje = date.today()
 
@@ -222,7 +207,7 @@ def categorizar(descricao: str) -> str:
 
 
 def interpretar(texto: str):
-    """Extrai valor, descricao, categoria e data. Devolve None se nao achar valor."""
+
     data, resto = extrair_data(texto)
 
     limpo = re.sub(r"r\$\s*", " ", resto, flags=re.I)
@@ -258,9 +243,7 @@ def interpretar(texto: str):
     }
 
 
-# --------------------------------------------------------------------
-# Formatacao
-# --------------------------------------------------------------------
+
 
 def moeda(v: float) -> str:
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -284,9 +267,7 @@ def teclado_categorias(tid: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(linhas)
 
 
-# --------------------------------------------------------------------
-# Handlers
-# --------------------------------------------------------------------
+
 
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -419,7 +400,7 @@ async def cmd_exportar(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 class _Sink:
-    """Coletor simples para o csv.writer escrever em memoria."""
+    
     def __init__(self, destino):
         self.destino = destino
 
@@ -486,7 +467,7 @@ async def erro(update: object, ctx: ContextTypes.DEFAULT_TYPE):
     log.error("Erro no update %s", update, exc_info=ctx.error)
 
 
-# --------------------------------------------------------------------
+
 
 def main():
     if not TOKEN:
@@ -496,7 +477,15 @@ def main():
 
     criar_tabelas()
 
-    app = Application.builder().token(TOKEN).build()
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .read_timeout(30)
+        .write_timeout(30)
+        .connect_timeout(30)
+        .pool_timeout(30)
+        .build()
+    )
     dono = filters.Chat(chat_id=CHAT_ID)
 
     app.add_handler(CommandHandler(["start", "ajuda"], cmd_start, filters=dono))
